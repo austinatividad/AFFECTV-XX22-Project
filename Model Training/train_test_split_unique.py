@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from random import randint
 
-def generate_index(x_df, test_indices):
+def generate_index(x_df, dup_df, test_indices):
     num_rows = x_df.shape[0]
     while True:
         random_index = randint(0, num_rows - 1)
@@ -21,8 +21,6 @@ def train_test_split_unique(x_df, y_df):
     train_size = num_rows - test_size
     
     dup_df = x_df[x_df.duplicated(keep=False)]
-    
-    
 
     #Split test data here
     test_indices = np.array([test_size,])
@@ -31,7 +29,7 @@ def train_test_split_unique(x_df, y_df):
     test_indices_tmp = []
     y_test_tmp = []
     for i in range(0, test_size):
-        random_index = generate_index(x_df, test_indices)
+        random_index = generate_index(x_df, dup_df, test_indices)
         test_indices_tmp.append(random_index)
         y_test_tmp.append(y_df[random_index])
 
