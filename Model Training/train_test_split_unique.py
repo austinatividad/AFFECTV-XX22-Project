@@ -3,6 +3,7 @@ import numpy as np
 from random import randint
 
 def generate_index(x_df, test_indices):
+    num_rows = x_df.shape[0]
     while True:
         random_index = randint(0, num_rows - 1)
 
