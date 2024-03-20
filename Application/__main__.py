@@ -2,6 +2,7 @@ import sys
 from PySide6.QtWidgets import QPushButton, QApplication, QVBoxLayout, QHBoxLayout, QLabel, QWidget
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import QSize
+
 class MainMenu(QWidget):
 
     def __init__(self):
