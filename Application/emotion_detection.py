@@ -10,6 +10,7 @@ def init_model(filename):
 def detect_emotions(model, landmarks):
 
     face_landmarks = []
+    print(landmarks)
     for i in range(len(landmarks)):
         face_landmarks.append(landmarks[i].x)
         face_landmarks.append(landmarks[i].y)

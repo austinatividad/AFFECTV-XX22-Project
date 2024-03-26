@@ -50,10 +50,7 @@ def init_model(filepath):
     FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
 
     base_options = BaseOptions(model_asset_path=filepath)
-    options = FaceLandmarkerOptions(base_options=base_options,
-                                        output_face_blendshapes=True,
-                                        output_facial_transformation_matrixes=True,
-                                        num_faces=1)
+    options = FaceLandmarkerOptions(base_options=base_options, num_faces=1)
 
     #Test the model
     detector2 = FaceLandmarker.create_from_options(options)

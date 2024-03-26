@@ -7,6 +7,11 @@ import cv2
 import face_detection
 import emotion_detection
 from time import time
+
+
+face_detection_wd ='Application/face_landmarker_v2_with_blendshapes.task'
+emotion_detection_wd = 'Application/emotion_model6.keras'
+
 print(os.getcwd())
 class MainMenu(QWidget):
 
@@ -127,19 +132,18 @@ class StartMenu(QWidget):
         fname = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\',"Image files (*.jpg *.png)")
         imageDirectory = fname[0]
 
-        faceDetectionModel = face_detection.init_model('Application/face_landmarker_v2_with_blendshapes.task')
-        emotionDetectionModel = emotion_detection.init_model('Application/emotion_model4.keras')
+        faceDetectionModel = face_detection.init_model(face_detection_wd)
+        emotionDetectionModel = emotion_detection.init_model(emotion_detection_wd)
 
         image = cv2.imread(imageDirectory)
         DetectionResult, image = face_detection.detect_faces(faceDetectionModel, image)
         if len(DetectionResult.face_landmarks) > 0:
-            print(DetectionResult.face_landmarks[1])
             confidence_levels = emotion_detection.detect_emotions(emotionDetectionModel, DetectionResult.face_landmarks[0])
         
         ConvertToQtFormat = QImage(image.data, image.shape[1], image.shape[0], QImage.Format_RGB888)
-        pic = ConvertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)
+        pic = ConvertToQtFormat.scaled(520, 400, Qt.KeepAspectRatio)
         
-        self.screenLabel.setPixmap(QPixmap.fromImage(pic).scaledToWidth(520).scaledToHeight(400))
+        self.screenLabel.setPixmap(QPixmap.fromImage(pic))
         self.angryLabel.setText(confidence_levels["Angry"])
         self.happyLabel.setText(confidence_levels["Happy"])
         self.neutralLabel.setText(confidence_levels["Neutral"])
@@ -156,8 +160,8 @@ class StartMenu(QWidget):
 
 class Webcam(QThread):
     ImageUpdate = Signal(QImage, dict)
-    faceDetectionModel = face_detection.init_model('Application/face_landmarker_v2_with_blendshapes.task')
-    emotionDetectionModel = emotion_detection.init_model('Application/emotion_model.keras')
+    faceDetectionModel = face_detection.init_model(face_detection_wd)
+    emotionDetectionModel = emotion_detection.init_model(emotion_detection_wd)
     detectFaces = True
     DetectionResult = None
 
