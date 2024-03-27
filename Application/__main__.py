@@ -189,6 +189,21 @@ class Webcam(QThread):
                 
                 
                 Image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                
+                
+                '''
+                New change: Resized the image to a square due to the face detection model's use of NormalizedLandmark 
+                Normalized Landmark represents a point in 3D space with x, y, z coordinates.
+                x and y are normalized to [0.0, 1.0] by the image width and height respectively.
+                '''
+                
+                height, width = Image.shape[:2]
+                if height > width:
+                    Image = Image[0:width, 0:width]
+                else:
+                    Image = Image[0:height, 0:height]
+                    
+
                 '''
                 Uncomment This if you want to resize the image to what it used in the dataset (about 96x96)
                 height, width = Image.shape[:2]
