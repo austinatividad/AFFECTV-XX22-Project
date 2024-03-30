@@ -1,23 +1,38 @@
-import sys
-import os
-os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+from sys import exit
 from PySide6.QtWidgets import QPushButton, QApplication, QVBoxLayout, QHBoxLayout, QLabel, QWidget, QFileDialog
-from PySide6.QtGui import QPixmap, QImage
+from PySide6.QtGui import QPixmap, QImage, QIcon
 from PySide6.QtCore import QSize, Qt, QThread, Signal
 import cv2
 import face_detection
 import emotion_detection
+from pandas import read_csv
 from time import time
-dir_path = os.path.dirname(os.path.realpath(__file__))
+from numpy import ndarray
+dir_path = "./assets/"
+face_detection_wd = dir_path + 'face_landmarker_v2_with_blendshapes.task'
+emotion_detection_wd = dir_path + 'emotion_model.keras'
+emotion_detection_wd_simplified = dir_path + 'emotion_model_simplified.keras'
 
-face_detection_wd = dir_path + '/face_landmarker_v2_with_blendshapes.task'
-emotion_detection_wd = dir_path + '/emotion_modelshrinkinglayers.keras'
+stat_df_simplified = read_csv(dir_path + 'stat_train_features_simplified.csv')
+stat_df = read_csv(dir_path + 'stat_train_features.csv')
+
+colors = {
+    "blue": (88, 102, 195),
+    "light_blue": (92, 107, 204),
+    "dark1_blue": (73, 85, 162),
+    "dark2_blue": (57, 67, 128),
+    "dark3_blue": (42, 49, 94),
+    "dark4_blue": (27, 31, 60)
+}
+
+
+
 class MainMenu(QWidget):
 
     def __init__(self):
         super().__init__()
         #  Image for  Main Menu
-        self.bgImage = QPixmap(dir_path + "/reservations.png")
+        self.bgImage = QPixmap(dir_path + "Face.png")
         self.bgImage = self.bgImage.scaled(QSize(640, 400))
         self.bgLabel = QLabel(self)
         self.bgLabel.setPixmap(self.bgImage)
@@ -26,6 +41,10 @@ class MainMenu(QWidget):
         self.startButton = QPushButton("Start")
         self.aboutButton = QPushButton("About")
         self.quitButton = QPushButton("Quit")
+
+        self.startButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        self.aboutButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        self.quitButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
 
         btnLayout  = QHBoxLayout()
         btnLayout.addWidget(self.startButton)
@@ -44,7 +63,11 @@ class MainMenu(QWidget):
         self.aboutButton.clicked.connect(self.about)
         self.quitButton.clicked.connect(self.quit)
 
-        self.resize(640, 480)
+        self.setWindowFlags(Qt.WindowCloseButtonHint | Qt.WindowMinimizeButtonHint)
+        self.setStyleSheet("background-color: rgb" + str(colors["dark2_blue"]) + ";")
+        self.resize(720, 480)
+        self.setWindowTitle("AFFECT: Faces of Emotion")
+        self.setWindowIcon(QIcon(dir_path + "Icon.png"))
 
     # Greets the user
     def start(self):
@@ -54,15 +77,51 @@ class MainMenu(QWidget):
         print("Show About Tab Here")
 
     def quit(self):
-        sys.exit()
+        exit()
+
+class AboutMenu(QWidget):
+
+    def __init__(self):
+        super().__init__()
+
+        #  Image for  Main Menu
+        self.bgLabel = QLabel(self)
+        self.bgLabel.setText("<h1>About Page</h1><br><p>This application detects the emotion that a face projects using facial landmarks provided by <a href='https://developers.google.com/mediapipe/solutions/vision/face_landmarker'>Mediapipe</a>,</p><p>fed into a Convolutional Neural Network.</p><p>In Video Mode, make sure your face fills the outline!</p><br><a href='https://github.com/austinatividad/AFFECTV-XX22-Project'>Github Link</a>")
+        self.bgLabel.setStyleSheet("background-color: rgb" + str(colors["dark4_blue"]) + "; color: rgb(255,255,255); font-size: 16px; font-weight: bold; padding: 3px;")
+        # Buttons for main menu
+        self.quitButton = QPushButton("Quit")
+        self.quitButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        # Create layout and add widgets
+        layout = QVBoxLayout()
+        layout.addWidget(self.bgLabel)
+        layout.addWidget(self.quitButton)
+        # Set dialog layout
+        self.setLayout(layout)
+        
+        # Add button signal to greetings slot
+        self.quitButton.clicked.connect(self.quit)
+
+        self.setWindowFlags(Qt.WindowCloseButtonHint | Qt.WindowMinimizeButtonHint)
+        self.setStyleSheet("background-color: rgb" + str(colors["dark2_blue"]) + ";")
+        self.resize(720, 480)
+        self.setWindowTitle("AFFECT: Faces of Emotion")
+        self.setWindowIcon(QIcon(dir_path + "/Icon.png"))
+
+    def quit(self):
+        print("Bye Bye!")
 
 class StartMenu(QWidget):
 
     def __init__(self):
         super().__init__()
+
+        self.faceDetectionModel = face_detection.init_model(face_detection_wd)
+        self.emotionDetectionModelSimplified = emotion_detection.init_model(emotion_detection_wd_simplified)
+        self.emotionDetectionModel = emotion_detection.init_model(emotion_detection_wd)
+
         #  Image for  Main Menu
         self.screenLabel = QLabel(self)
-        self.screenLabel.setStyleSheet("background-color: rgb(0,0,0)")
+        self.screenLabel.setStyleSheet("background-color: rgb" + str(colors["dark2_blue"]) + ";")
 
         self.angryLabel = QLabel(self)
         self.angryLabel.setText("Angry: 00.00%")
@@ -73,16 +132,33 @@ class StartMenu(QWidget):
         self.sadLabel = QLabel(self)
         self.sadLabel.setText("Sad: 00.00%")
 
+        self.angryLabel.setStyleSheet("background-color: rgb" + str(colors["dark4_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        self.happyLabel.setStyleSheet("background-color: rgb" + str(colors["dark4_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        self.neutralLabel.setStyleSheet("background-color: rgb" + str(colors["dark4_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        self.sadLabel.setStyleSheet("background-color: rgb" + str(colors["dark4_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+
+
         # Buttons for main menu
-        self.toggleMaskButton = QPushButton("Toggle Mask: On")
+        self.toggleMaskButton = QPushButton("Show Mask: On")
+        self.changeMaskModeButton = QPushButton("Mask Mode: Full")
         self.imgButton = QPushButton("Test Image")
         self.vidButton = QPushButton("Test Video")
         self.exitAppButton = QPushButton("Quit")
 
+        self.toggleMaskButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        self.changeMaskModeButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        self.imgButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        self.vidButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        self.exitAppButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+
+
         self.useMask = True
+        self.fullMask = True
+        self.delta = 0
 
         btnLayout  = QHBoxLayout()
         btnLayout.addWidget(self.toggleMaskButton)
+        btnLayout.addWidget(self.changeMaskModeButton)
         btnLayout.addWidget(self.imgButton)
         btnLayout.addWidget(self.vidButton)
         btnLayout.addWidget(self.exitAppButton)
@@ -95,6 +171,7 @@ class StartMenu(QWidget):
         # Create layout and add widgets
         appLayout = QVBoxLayout()
         appLayout.addWidget(self.screenLabel, alignment=Qt.AlignCenter)
+
         appLayout.addLayout(btnLayout)
 
         layout = QHBoxLayout()
@@ -109,41 +186,66 @@ class StartMenu(QWidget):
         
         # Add button signal to greetings slot
         self.toggleMaskButton.clicked.connect(self.toggleMask)
+        self.changeMaskModeButton.clicked.connect(self.toggleMaskMode)
         self.imgButton.clicked.connect(self.imgMode)
         self.vidButton.clicked.connect(self.vidMode)
         self.exitAppButton.clicked.connect(self.exit)
 
-        self.resize(640, 480)
+        self.setWindowFlags(Qt.WindowCloseButtonHint | Qt.WindowMinimizeButtonHint)
+        self.setStyleSheet("background-color: rgb" + str(colors["dark2_blue"]) + ";") 
+        self.resize(720, 480)
+        self.setWindowTitle("AFFECT: Faces of Emotion")
+        self.setWindowIcon(QIcon(dir_path + "/Icon.png"))
 
-    def updateVideo(self, image, annotated_image, confidence_levels):
-        imageToShow = image
+    def updateVideo(self, raw_image, timeElapsed, center_coord, ellipse_coord, axes_length):
+        self.delta += timeElapsed
+        DetectionResult, FlippedAnnotatedImage = face_detection.detect_faces(self.faceDetectionModel, raw_image, self.fullMask)
 
+        if self.delta > 1 and len(DetectionResult.face_landmarks) > 0:
+            model_to_use = self.emotionDetectionModelSimplified
+
+            if self.fullMask:
+                model_to_use = self.emotionDetectionModel
+
+            confidence_levels = emotion_detection.detect_emotions(model_to_use, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_simp=stat_df_simplified, fullMask=self.fullMask)
+            print("Predicted Emotion:", confidence_levels)
+            self.delta = 0
+            self.setEmotionLabels(confidence_levels)
+        
+        imageToShow = raw_image
         if self.useMask:
-            imageToShow = annotated_image
+            imageToShow = FlippedAnnotatedImage
+            
+        imageToShow = cv2.circle(imageToShow, center=center_coord, radius=2, color=colors["light_blue"], thickness=1)
+        imageToShow = cv2.ellipse(imageToShow, center=ellipse_coord, axes=axes_length, angle=0, startAngle=0, endAngle=360, color=colors["light_blue"], thickness=1)
 
-        self.screenLabel.setPixmap(QPixmap.fromImage(imageToShow).scaledToWidth(400).scaledToHeight(400))
-        self.angryLabel.setText(confidence_levels["Angry"])
-        self.happyLabel.setText(confidence_levels["Happy"])
-        self.neutralLabel.setText(confidence_levels["Neutral"])
-        self.sadLabel.setText(confidence_levels["Sad"])
+        ConvertToQtFormat = QImage(imageToShow.data, imageToShow.shape[1], imageToShow.shape[0], QImage.Format_RGB888)
+        pic = ConvertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)
+
+        self.screenLabel.setPixmap(QPixmap.fromImage(pic).scaledToWidth(400).scaledToHeight(400))
     
-    # Greets the user
+    def toggleMaskMode(self):
+        if self.fullMask:
+            self.fullMask = False
+            self.changeMaskModeButton.setText("Mask Mode: Lite")
+        else:
+            self.fullMask = True
+            self.changeMaskModeButton.setText("Mask Mode: Full")
+
+
     def toggleMask(self):
         if self.useMask:
             self.useMask = False
-            self.toggleMaskButton.setText("Toggle Mask: Off")
+            self.toggleMaskButton.setText("Show Mask: Off")
         else:
             self.useMask = True
-            self.toggleMaskButton.setText("Toggle Mask: On")
+            self.toggleMaskButton.setText("Show Mask: On")
 
     def imgMode(self):
         self.webcamWorker.stop()
 
         fname = QFileDialog.getOpenFileName(self, 'Open file', 'c:\\',"Image files (*.jpg *.png)")
         imageDirectory = fname[0]
-
-        faceDetectionModel = face_detection.init_model(face_detection_wd)
-        emotionDetectionModel = emotion_detection.init_model(emotion_detection_wd)
 
         image = cv2.imread(imageDirectory)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -153,31 +255,36 @@ class StartMenu(QWidget):
         diff = abs(width - height) // 2
 
         if width < height: #Pad the sides
-            image = cv2.copyMakeBorder(image, 0, 0, diff, diff, cv2.BORDER_CONSTANT, None, value=1)
+            image = cv2.copyMakeBorder(image, 0, 0, diff, diff, cv2.BORDER_CONSTANT, None, value=colors["blue"])
         elif width > height: #Pad up andd down
-            image = cv2.copyMakeBorder(image, diff, diff, 0, 0, cv2.BORDER_CONSTANT, None, value=1)
+            image = cv2.copyMakeBorder(image, diff, diff, 0, 0, cv2.BORDER_CONSTANT, None, value=colors["blue"])
         else:
-            image = cv2.copyMakeBorder(image, 2, 2, 2, 2, cv2.BORDER_CONSTANT, None, value=1)
+            image = cv2.copyMakeBorder(image, 2, 2, 2, 2, cv2.BORDER_CONSTANT, None, value=colors["blue"])
         
         #Check if width is odd
         if width % 2 == 1:
             #Add 1 pixel to left
-            image = cv2.copyMakeBorder(image, 0, 0, 0, 1, cv2.BORDER_CONSTANT, None, value=1)
+            image = cv2.copyMakeBorder(image, 0, 0, 0, 1, cv2.BORDER_CONSTANT, None, value=colors["blue"])
 
 
-        DetectionResult, annotated_image = face_detection.detect_faces(faceDetectionModel, image)
+        DetectionResult, annotated_image = face_detection.detect_faces(self.faceDetectionModel, image, self.fullMask)
 
         if self.useMask:
             image = annotated_image
 
         if len(DetectionResult.face_landmarks) > 0:
-            confidence_levels = emotion_detection.detect_emotions(emotionDetectionModel, DetectionResult.face_landmarks[0])
+            model_to_use = self.emotionDetectionModelSimplified
+
+            if self.fullMask:
+                model_to_use = self.emotionDetectionModel
+
+            confidence_levels = emotion_detection.detect_emotions(model_to_use, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_simp=stat_df_simplified, fullMask=self.fullMask)
         else:
             confidence_levels = {
-                "Angry" : "Angry: 00.00%",
-                "Happy" : "Happy: 00.00%",
-                "Neutral" : "Neutral: 00.00%",
-                "Sad" : "Sad: 00.00%"
+                "Angry" : 00.00,
+                "Happy" : 00.00,
+                "Neutral" : 00.00,
+                "Sad" : 00.00
             }
         
         print("Before Conversion")
@@ -188,11 +295,30 @@ class StartMenu(QWidget):
         
         print("Conversion!")
         self.screenLabel.setPixmap(QPixmap.fromImage(pic))
-        self.angryLabel.setText(confidence_levels["Angry"])
-        self.happyLabel.setText(confidence_levels["Happy"])
-        self.neutralLabel.setText(confidence_levels["Neutral"])
-        self.sadLabel.setText(confidence_levels["Sad"])
-    
+        self.setEmotionLabels(confidence_levels)
+
+    def setEmotionLabels(self, confidence_levels):
+        self.angryLabel.setText("Angry: " + str(confidence_levels["Angry"]) + "%")
+        self.happyLabel.setText("Happy: " + str(confidence_levels["Happy"]) + "%")
+        self.neutralLabel.setText("Neutral: " + str(confidence_levels["Neutral"]) + "%")
+        self.sadLabel.setText("Sad: " + str(confidence_levels["Sad"]) + "%")
+        
+        self.angryLabel.setStyleSheet("background-color: rgb" + str(colors["dark4_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        self.happyLabel.setStyleSheet("background-color: rgb" + str(colors["dark4_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        self.neutralLabel.setStyleSheet("background-color: rgb" + str(colors["dark4_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        self.sadLabel.setStyleSheet("background-color: rgb" + str(colors["dark4_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+
+        pred_emotion = max(confidence_levels, key=confidence_levels.get)
+
+        if pred_emotion == "Angry":
+            self.angryLabel.setStyleSheet("background-color: rgb" + str(colors["light_blue"]) + "; color: rgb"+ str(colors["dark3_blue"]) + "; font-size: 22px; font-weight: bold; padding: 3px;")
+        elif pred_emotion == "Happy":
+            self.happyLabel.setStyleSheet("background-color: rgb" + str(colors["light_blue"]) + "; color: rgb"+ str(colors["dark3_blue"]) + "; font-size: 22px; font-weight: bold; padding: 3px;") 
+        elif pred_emotion == "Neutral":
+            self.neutralLabel.setStyleSheet("background-color: rgb" + str(colors["light_blue"]) + "; color: rgb"+ str(colors["dark3_blue"]) + "; font-size: 22px; font-weight: bold; padding: 3px;") 
+        elif pred_emotion == "Sad":
+            self.sadLabel.setStyleSheet("background-color: rgb" + str(colors["light_blue"]) + "; color: rgb"+ str(colors["dark3_blue"]) + "; font-size: 22px; font-weight: bold; padding: 3px;") 
+
     def vidMode(self):
         self.webcamWorker.start()
         print("Vid Mode On!")
@@ -203,10 +329,7 @@ class StartMenu(QWidget):
 
 
 class Webcam(QThread):
-    ImageUpdate = Signal(QImage, QImage, dict)
-    faceDetectionModel = face_detection.init_model(face_detection_wd)
-    emotionDetectionModel = emotion_detection.init_model(emotion_detection_wd)
-    detectFaces = True
+    ImageUpdate = Signal(ndarray, float, tuple, tuple, tuple)
     DetectionResult = None
 
     def run(self):
@@ -218,31 +341,21 @@ class Webcam(QThread):
         width = int(Capture.get(cv2.CAP_PROP_FRAME_WIDTH))
 
         offset = width - height
-        center_coord = (int(height * 0.45), int(height // 2))
-        axes_length = (int(height * 0.35), int(height * 0.45))
+        center_coord = (int(height // 2), int(height // 2))
+        ellipse_coord = (int(height // 2), int(height * 0.45))
+        axes_length = (int(height * 0.35), int(height * 0.42))
 
 
         print(center_coord)
 
         previous = time()
-        delta = 0
-
-        confidence_levels = {
-            "Angry" : "00.00%",
-            "Happy" : "00.00%",
-            "Neutral" : "00.00%",
-            "Sad" : "00.00%"
-        }
-        
         while self.ThreadActive:
             ret, frame = Capture.read()
             if ret:
                 # Get the current time, increase delta and update the previous variable
                 current = time()
-                delta += current - previous
+                timeElapsed = current - previous
                 previous = current
-                
-                
                 Image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
                 Image = Image[0:height, int(offset // 2):int(offset // 2)+height]
@@ -256,61 +369,12 @@ class Webcam(QThread):
                 new_width = width * scaling_factor
                 Image = cv2.resize(Image, (round(new_width), round(new_height)))
                 '''
-                
 
                 FlippedImage = cv2.flip(Image, 1)
-                if self.detectFaces:
-                    DetectionResult, FlippedAnnotatedImage = face_detection.detect_faces(self.faceDetectionModel, FlippedImage)
-                    
-                    FlippedAnnotatedImage = cv2.circle(FlippedAnnotatedImage, center=center_coord, radius=2, color=(0, 255, 0), thickness=1)
-                    FlippedAnnotatedImage = cv2.ellipse(FlippedAnnotatedImage, center=center_coord, axes=axes_length, angle=0, startAngle=0, endAngle=360, color=(0, 255, 0), thickness=1)
-
-                    if delta > 1 and len(DetectionResult.face_landmarks) > 0:
-                        confidence_levels = emotion_detection.detect_emotions(self.emotionDetectionModel, DetectionResult.face_landmarks[0])
-                        print("Predicted Emotion:", confidence_levels)
-
-                        delta = 0
-
-
-                FlippedImage = cv2.circle(FlippedImage, center=center_coord, radius=2, color=(0, 255, 0), thickness=1)
-                FlippedImage = cv2.ellipse(FlippedImage, center=center_coord, axes=axes_length, angle=0, startAngle=0, endAngle=360, color=(0, 255, 0), thickness=1)
-
-                ConvertToQtFormatAnnotated = QImage(FlippedAnnotatedImage.data, FlippedAnnotatedImage.shape[1], FlippedAnnotatedImage.shape[0], QImage.Format_RGB888)
-                picAnnotated = ConvertToQtFormatAnnotated.scaled(640, 480, Qt.KeepAspectRatio)
-
-                ConvertToQtFormatAnnotated = QImage(FlippedImage.data, FlippedImage.shape[1], FlippedImage.shape[0], QImage.Format_RGB888)
-                pic = ConvertToQtFormatAnnotated.scaled(640, 480, Qt.KeepAspectRatio)
-
-
-                self.ImageUpdate.emit(pic, picAnnotated, confidence_levels)
+                self.ImageUpdate.emit(FlippedImage, timeElapsed, center_coord, ellipse_coord, axes_length)
     def stop(self):
         self.ThreadActive = False
         self.quit()
-
-class AboutMenu(QWidget):
-
-    def __init__(self):
-        super().__init__()
-        #  Image for  Main Menu
-        self.bgLabel = QLabel(self)
-        self.bgLabel.setText("About Page")
-        # Buttons for main menu
-        self.quitButton = QPushButton("Quit")
-        # Create layout and add widgets
-        layout = QVBoxLayout()
-        layout.addWidget(self.bgLabel)
-        layout.addWidget(self.quitButton)
-        # Set dialog layout
-        self.setLayout(layout)
-        
-        # Add button signal to greetings slot
-        self.quitButton.clicked.connect(self.quit)
-
-        self.resize(640, 480)
-
-    def quit(self):
-        print("Bye Bye!")
-
 
 def showAbout(mainMenu, startMenu, aboutMenu):
     mainMenu.hide()
@@ -329,7 +393,7 @@ def showMain(mainMenu, startMenu, aboutMenu):
 
 if __name__ == '__main__':
     # Create the Qt Application
-    app = QApplication(sys.argv)
+    app = QApplication([])
     # Create and show the form
     mainMenu = MainMenu()
     aboutMenu = AboutMenu()
@@ -344,5 +408,5 @@ if __name__ == '__main__':
     mainMenu.show()
 
     # Run the main Qt loop
-    sys.exit(app.exec())
+    exit(app.exec())
 
