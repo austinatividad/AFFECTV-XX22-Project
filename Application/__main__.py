@@ -7,18 +7,16 @@ import cv2
 import face_detection
 import emotion_detection
 from time import time
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
-
-face_detection_wd ='Application/face_landmarker_v2_with_blendshapes.task'
-emotion_detection_wd = 'Application/emotion_model6.keras'
-
-print(os.getcwd())
+face_detection_wd = dir_path + '/face_landmarker_v2_with_blendshapes.task'
+emotion_detection_wd = dir_path + '/emotion_modelshrinkinglayers.keras'
 class MainMenu(QWidget):
 
     def __init__(self):
         super().__init__()
         #  Image for  Main Menu
-        self.bgImage = QPixmap(os.getcwd() + "/Application/reservations.png")
+        self.bgImage = QPixmap(dir_path + "/reservations.png")
         self.bgImage = self.bgImage.scaled(QSize(640, 400))
         self.bgLabel = QLabel(self)
         self.bgLabel.setPixmap(self.bgImage)
@@ -75,13 +73,15 @@ class StartMenu(QWidget):
         self.sadLabel.setText("Sad: 00.00%")
 
         # Buttons for main menu
-        self.startAppButton = QPushButton("Start")
-        self.imgButton = QPushButton("I")
-        self.vidButton = QPushButton("V")
+        self.toggleMaskButton = QPushButton("Toggle Mask: On")
+        self.imgButton = QPushButton("Test Image")
+        self.vidButton = QPushButton("Test Video")
         self.exitAppButton = QPushButton("Quit")
 
+        self.useMask = True
+
         btnLayout  = QHBoxLayout()
-        btnLayout.addWidget(self.startAppButton)
+        btnLayout.addWidget(self.toggleMaskButton)
         btnLayout.addWidget(self.imgButton)
         btnLayout.addWidget(self.vidButton)
         btnLayout.addWidget(self.exitAppButton)
@@ -96,7 +96,6 @@ class StartMenu(QWidget):
         appLayout.addWidget(self.screenLabel, alignment=Qt.AlignCenter)
         appLayout.addLayout(btnLayout)
 
-
         layout = QHBoxLayout()
         layout.addLayout(appLayout, stretch=4)
         layout.addLayout(labelsLayout, stretch=1)
@@ -108,23 +107,33 @@ class StartMenu(QWidget):
         self.webcamWorker.ImageUpdate.connect(self.updateVideo)
         
         # Add button signal to greetings slot
-        self.startAppButton.clicked.connect(self.start)
+        self.toggleMaskButton.clicked.connect(self.toggleMask)
         self.imgButton.clicked.connect(self.imgMode)
         self.vidButton.clicked.connect(self.vidMode)
         self.exitAppButton.clicked.connect(self.exit)
 
         self.resize(640, 480)
 
-    def updateVideo(self, image, confidence_levels):
-        self.screenLabel.setPixmap(QPixmap.fromImage(image).scaledToWidth(520).scaledToHeight(400))
+    def updateVideo(self, image, annotated_image, confidence_levels):
+        imageToShow = image
+
+        if self.useMask:
+            imageToShow = annotated_image
+
+        self.screenLabel.setPixmap(QPixmap.fromImage(imageToShow).scaledToWidth(400).scaledToHeight(400))
         self.angryLabel.setText(confidence_levels["Angry"])
         self.happyLabel.setText(confidence_levels["Happy"])
         self.neutralLabel.setText(confidence_levels["Neutral"])
         self.sadLabel.setText(confidence_levels["Sad"])
     
     # Greets the user
-    def start(self):
-        print("Toggling Detection System Now")
+    def toggleMask(self):
+        if self.useMask:
+            self.useMask = False
+            self.toggleMaskButton.setText("Toggle Mask: Off")
+        else:
+            self.useMask = True
+            self.toggleMaskButton.setText("Toggle Mask: On")
 
     def imgMode(self):
         self.webcamWorker.stop()
@@ -136,13 +145,47 @@ class StartMenu(QWidget):
         emotionDetectionModel = emotion_detection.init_model(emotion_detection_wd)
 
         image = cv2.imread(imageDirectory)
-        DetectionResult, image = face_detection.detect_faces(faceDetectionModel, image)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        height, width = image.shape[0:2]
+
+        diff = abs(width - height) // 2
+
+        if width < height: #Pad the sides
+            image = cv2.copyMakeBorder(image, 0, 0, diff, diff, cv2.BORDER_CONSTANT, None, value=1)
+        elif width > height: #Pad up andd down
+            image = cv2.copyMakeBorder(image, diff, diff, 0, 0, cv2.BORDER_CONSTANT, None, value=1)
+        else:
+            image = cv2.copyMakeBorder(image, 2, 2, 2, 2, cv2.BORDER_CONSTANT, None, value=1)
+        
+        #Check if width is odd
+        if width % 2 == 1:
+            #Add 1 pixel to left
+            image = cv2.copyMakeBorder(image, 0, 0, 0, 1, cv2.BORDER_CONSTANT, None, value=1)
+
+
+        DetectionResult, annotated_image = face_detection.detect_faces(faceDetectionModel, image)
+
+        if self.useMask:
+            image = annotated_image
+
         if len(DetectionResult.face_landmarks) > 0:
             confidence_levels = emotion_detection.detect_emotions(emotionDetectionModel, DetectionResult.face_landmarks[0])
+        else:
+            confidence_levels = {
+                "Angry" : "Angry: 00.00%",
+                "Happy" : "Happy: 00.00%",
+                "Neutral" : "Neutral: 00.00%",
+                "Sad" : "Sad: 00.00%"
+            }
         
-        ConvertToQtFormat = QImage(image.data, image.shape[1], image.shape[0], QImage.Format_RGB888)
+        print("Before Conversion")
+        
+        bytesPerLine = image.shape[1] * 3
+        ConvertToQtFormat = QImage(image.data, image.shape[1], image.shape[0], bytesPerLine, QImage.Format_RGB888)
         pic = ConvertToQtFormat.scaled(520, 400, Qt.KeepAspectRatio)
         
+        print("Conversion!")
         self.screenLabel.setPixmap(QPixmap.fromImage(pic))
         self.angryLabel.setText(confidence_levels["Angry"])
         self.happyLabel.setText(confidence_levels["Happy"])
@@ -159,7 +202,7 @@ class StartMenu(QWidget):
 
 
 class Webcam(QThread):
-    ImageUpdate = Signal(QImage, dict)
+    ImageUpdate = Signal(QImage, QImage, dict)
     faceDetectionModel = face_detection.init_model(face_detection_wd)
     emotionDetectionModel = emotion_detection.init_model(emotion_detection_wd)
     detectFaces = True
@@ -168,6 +211,17 @@ class Webcam(QThread):
     def run(self):
         self.ThreadActive = True
         Capture = cv2.VideoCapture(0)
+
+
+        height = int(Capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        width = int(Capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+
+        offset = width - height
+        center_coord = (int(height * 0.45), int(height // 2))
+        axes_length = (int(height * 0.35), int(height * 0.45))
+
+
+        print(center_coord)
 
         previous = time()
         delta = 0
@@ -190,33 +244,25 @@ class Webcam(QThread):
                 
                 Image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
-                
-                '''
-                New change: Resized the image to a square due to the face detection model's use of NormalizedLandmark 
-                Normalized Landmark represents a point in 3D space with x, y, z coordinates.
-                x and y are normalized to [0.0, 1.0] by the image width and height respectively.
-                '''
-                
-                height, width = Image.shape[:2]
-                if height > width:
-                    Image = Image[0:width, 0:width]
-                else:
-                    Image = Image[0:height, 0:height]
-                    
+                Image = Image[0:height, int(offset // 2):int(offset // 2)+height]
 
                 '''
                 Uncomment This if you want to resize the image to what it used in the dataset (about 96x96)
+                
                 height, width = Image.shape[:2]
                 scaling_factor = 96 / float(height)
                 new_height = 96
                 new_width = width * scaling_factor
-                Image = cv2.resize(Image, (round(new_width), round(new_height))) 
+                Image = cv2.resize(Image, (round(new_width), round(new_height)))
                 '''
                 
 
                 FlippedImage = cv2.flip(Image, 1)
                 if self.detectFaces:
-                    DetectionResult, FlippedImage = face_detection.detect_faces(self.faceDetectionModel, FlippedImage)
+                    DetectionResult, FlippedAnnotatedImage = face_detection.detect_faces(self.faceDetectionModel, FlippedImage)
+                    
+                    FlippedAnnotatedImage = cv2.circle(FlippedAnnotatedImage, center=center_coord, radius=2, color=(0, 255, 0), thickness=1)
+                    FlippedAnnotatedImage = cv2.ellipse(FlippedAnnotatedImage, center=center_coord, axes=axes_length, angle=0, startAngle=0, endAngle=360, color=(0, 255, 0), thickness=1)
 
                     if delta > 1 and len(DetectionResult.face_landmarks) > 0:
                         confidence_levels = emotion_detection.detect_emotions(self.emotionDetectionModel, DetectionResult.face_landmarks[0])
@@ -224,9 +270,18 @@ class Webcam(QThread):
 
                         delta = 0
 
-                ConvertToQtFormat = QImage(FlippedImage.data, FlippedImage.shape[1], FlippedImage.shape[0], QImage.Format_RGB888)
-                pic = ConvertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)
-                self.ImageUpdate.emit(pic, confidence_levels)
+
+                FlippedImage = cv2.circle(FlippedImage, center=center_coord, radius=2, color=(0, 255, 0), thickness=1)
+                FlippedImage = cv2.ellipse(FlippedImage, center=center_coord, axes=axes_length, angle=0, startAngle=0, endAngle=360, color=(0, 255, 0), thickness=1)
+
+                ConvertToQtFormatAnnotated = QImage(FlippedAnnotatedImage.data, FlippedAnnotatedImage.shape[1], FlippedAnnotatedImage.shape[0], QImage.Format_RGB888)
+                picAnnotated = ConvertToQtFormatAnnotated.scaled(640, 480, Qt.KeepAspectRatio)
+
+                ConvertToQtFormatAnnotated = QImage(FlippedImage.data, FlippedImage.shape[1], FlippedImage.shape[0], QImage.Format_RGB888)
+                pic = ConvertToQtFormatAnnotated.scaled(640, 480, Qt.KeepAspectRatio)
+
+
+                self.ImageUpdate.emit(pic, picAnnotated, confidence_levels)
     def stop(self):
         self.ThreadActive = False
         self.quit()
