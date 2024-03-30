@@ -1,5 +1,6 @@
 import sys
 import os
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 from PySide6.QtWidgets import QPushButton, QApplication, QVBoxLayout, QHBoxLayout, QLabel, QWidget, QFileDialog
 from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtCore import QSize, Qt, QThread, Signal
