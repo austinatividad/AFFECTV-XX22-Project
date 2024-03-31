@@ -8,13 +8,22 @@ import emotion_detection
 from pandas import read_csv
 from time import time
 from numpy import ndarray
+
 dir_path = "./assets/"
 face_detection_wd = dir_path + 'face_landmarker_v2_with_blendshapes.task'
 emotion_detection_wd = dir_path + 'emotion_model.keras'
 emotion_detection_wd_simplified = dir_path + 'emotion_model_simplified.keras'
+emotion_detection_wd_left = dir_path + 'emotion_model_left.keras'
 
-stat_df_simplified = read_csv(dir_path + 'stat_train_features_simplified.csv')
+MASK_MODE_FULL = 0
+MASK_MODE_SIMPLIFIED = 1
+MASK_MODE_LEFT = 2
+
+
+
 stat_df = read_csv(dir_path + 'stat_train_features.csv')
+stat_df_simplified = read_csv(dir_path + 'stat_train_features_simplified.csv')
+stat_df_left = read_csv(dir_path + 'stat_train_features_left.csv')
 
 colors = {
     "blue": (88, 102, 195),
@@ -116,8 +125,9 @@ class StartMenu(QWidget):
         super().__init__()
 
         self.faceDetectionModel = face_detection.init_model(face_detection_wd)
-        self.emotionDetectionModelSimplified = emotion_detection.init_model(emotion_detection_wd_simplified)
         self.emotionDetectionModel = emotion_detection.init_model(emotion_detection_wd)
+        self.emotionDetectionModelSimplified = emotion_detection.init_model(emotion_detection_wd_simplified)
+        self.emotionDetectionModelLeft = emotion_detection.init_model(emotion_detection_wd_left)
 
         #  Image for  Main Menu
         self.screenLabel = QLabel(self)
@@ -153,7 +163,7 @@ class StartMenu(QWidget):
 
 
         self.useMask = True
-        self.fullMask = True
+        self.maskMode = MASK_MODE_FULL
         self.delta = 0
 
         btnLayout  = QHBoxLayout()
@@ -199,16 +209,17 @@ class StartMenu(QWidget):
 
     def updateVideo(self, raw_image, timeElapsed, center_coord, ellipse_coord, axes_length):
         self.delta += timeElapsed
-        DetectionResult, FlippedAnnotatedImage = face_detection.detect_faces(self.faceDetectionModel, raw_image, self.fullMask)
+        DetectionResult, FlippedAnnotatedImage = face_detection.detect_faces(self.faceDetectionModel, raw_image, self.maskMode)
 
-        if self.delta > 1 and len(DetectionResult.face_landmarks) > 0:
+        if self.delta > 1.1 and len(DetectionResult.face_landmarks) > 0:
             model_to_use = self.emotionDetectionModelSimplified
 
-            if self.fullMask:
+            if self.maskMode == MASK_MODE_FULL:
                 model_to_use = self.emotionDetectionModel
+            elif self.maskMode == MASK_MODE_LEFT:
+                model_to_use = self.emotionDetectionModelLeft
 
-            confidence_levels = emotion_detection.detect_emotions(model_to_use, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_simp=stat_df_simplified, fullMask=self.fullMask)
-            print("Predicted Emotion:", confidence_levels)
+            confidence_levels = emotion_detection.detect_emotions(model_to_use, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_left=stat_df_left, stat_simp=stat_df_simplified, maskMode=self.maskMode)
             self.delta = 0
             self.setEmotionLabels(confidence_levels)
         
@@ -225,13 +236,15 @@ class StartMenu(QWidget):
         self.screenLabel.setPixmap(QPixmap.fromImage(pic).scaledToWidth(400).scaledToHeight(400))
     
     def toggleMaskMode(self):
-        if self.fullMask:
-            self.fullMask = False
+        if self.maskMode == MASK_MODE_FULL:
+            self.maskMode = MASK_MODE_LEFT
+            self.changeMaskModeButton.setText("Mask Mode: Left")
+        elif self.maskMode == MASK_MODE_LEFT:
+            self.maskMode = MASK_MODE_SIMPLIFIED
             self.changeMaskModeButton.setText("Mask Mode: Lite")
-        else:
-            self.fullMask = True
+        elif self.maskMode == MASK_MODE_SIMPLIFIED:
+            self.maskMode = MASK_MODE_FULL
             self.changeMaskModeButton.setText("Mask Mode: Full")
-
 
     def toggleMask(self):
         if self.useMask:
@@ -267,7 +280,7 @@ class StartMenu(QWidget):
             image = cv2.copyMakeBorder(image, 0, 0, 0, 1, cv2.BORDER_CONSTANT, None, value=colors["blue"])
 
 
-        DetectionResult, annotated_image = face_detection.detect_faces(self.faceDetectionModel, image, self.fullMask)
+        DetectionResult, annotated_image = face_detection.detect_faces(self.faceDetectionModel, image, self.maskMode)
 
         if self.useMask:
             image = annotated_image
@@ -275,10 +288,12 @@ class StartMenu(QWidget):
         if len(DetectionResult.face_landmarks) > 0:
             model_to_use = self.emotionDetectionModelSimplified
 
-            if self.fullMask:
+            if self.maskMode == MASK_MODE_FULL:
                 model_to_use = self.emotionDetectionModel
+            elif self.maskMode == MASK_MODE_LEFT:
+                model_to_use = self.emotionDetectionModelLeft
 
-            confidence_levels = emotion_detection.detect_emotions(model_to_use, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_simp=stat_df_simplified, fullMask=self.fullMask)
+            confidence_levels = emotion_detection.detect_emotions(model_to_use, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_left=stat_df_left, stat_simp=stat_df_simplified, maskMode=self.maskMode)
         else:
             confidence_levels = {
                 "Angry" : 00.00,
