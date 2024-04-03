@@ -392,8 +392,8 @@ class Webcam(QThread):
                     imageToShow = FlippedImage
 
 
-                imageToShow = cv2.circle(imageToShow, center=center_coord, radius=2, color=colors["light_blue"], thickness=1)
-                imageToShow = cv2.ellipse(imageToShow, center=ellipse_coord, axes=axes_length, angle=0, startAngle=0, endAngle=360, color=colors["light_blue"], thickness=1)
+                #imageToShow = cv2.circle(imageToShow, center=center_coord, radius=2, color=colors["light_blue"], thickness=1)
+                #imageToShow = cv2.ellipse(imageToShow, center=ellipse_coord, axes=axes_length, angle=0, startAngle=0, endAngle=360, color=colors["light_blue"], thickness=1)
                 
                 ConvertToQtFormat = QImage(imageToShow.data, imageToShow.shape[1], imageToShow.shape[0], QImage.Format_RGB888)
                 pic = ConvertToQtFormat.scaled(800, 400, Qt.KeepAspectRatio)
