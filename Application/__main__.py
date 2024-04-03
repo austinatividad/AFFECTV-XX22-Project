@@ -51,9 +51,9 @@ class MainMenu(QWidget):
         self.aboutButton = QPushButton("About")
         self.quitButton = QPushButton("Quit")
 
-        self.startButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
-        self.aboutButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
-        self.quitButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 22px; font-weight: bold; padding: 3px;")
+        self.startButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 20px; font-weight: bold; padding: 3px;")
+        self.aboutButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 20px; font-weight: bold; padding: 3px;")
+        self.quitButton.setStyleSheet("background-color: rgb" + str(colors["dark1_blue"]) + "; color: rgb(255,255,255); font-size: 20px; font-weight: bold; padding: 3px;")
 
         btnLayout  = QHBoxLayout()
         btnLayout.addWidget(self.startButton)
@@ -74,7 +74,7 @@ class MainMenu(QWidget):
 
         self.setWindowFlags(Qt.WindowCloseButtonHint | Qt.WindowMinimizeButtonHint)
         self.setStyleSheet("background-color: rgb" + str(colors["dark2_blue"]) + ";")
-        self.resize(720, 480)
+        self.resize(640, 480)
         self.setWindowTitle("AFFECT: Faces of Emotion")
         self.setWindowIcon(QIcon(dir_path + "Icon.png"))
 
@@ -203,55 +203,36 @@ class StartMenu(QWidget):
 
         self.setWindowFlags(Qt.WindowCloseButtonHint | Qt.WindowMinimizeButtonHint)
         self.setStyleSheet("background-color: rgb" + str(colors["dark2_blue"]) + ";") 
-        self.resize(720, 480)
+        self.resize(960, 480)
         self.setWindowTitle("AFFECT: Faces of Emotion")
         self.setWindowIcon(QIcon(dir_path + "/Icon.png"))
 
-    def updateVideo(self, raw_image, timeElapsed, center_coord, ellipse_coord, axes_length):
-        self.delta += timeElapsed
-        DetectionResult, FlippedAnnotatedImage = face_detection.detect_faces(self.faceDetectionModel, raw_image, self.maskMode)
-
-        if self.delta > 1.1 and len(DetectionResult.face_landmarks) > 0:
-            model_to_use = self.emotionDetectionModelSimplified
-
-            if self.maskMode == MASK_MODE_FULL:
-                model_to_use = self.emotionDetectionModel
-            elif self.maskMode == MASK_MODE_LEFT:
-                model_to_use = self.emotionDetectionModelLeft
-
-            confidence_levels = emotion_detection.detect_emotions(model_to_use, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_left=stat_df_left, stat_simp=stat_df_simplified, maskMode=self.maskMode)
-            self.delta = 0
-            self.setEmotionLabels(confidence_levels)
-        
-        imageToShow = raw_image
-        if self.useMask:
-            imageToShow = FlippedAnnotatedImage
-            
-        imageToShow = cv2.circle(imageToShow, center=center_coord, radius=2, color=colors["light_blue"], thickness=1)
-        imageToShow = cv2.ellipse(imageToShow, center=ellipse_coord, axes=axes_length, angle=0, startAngle=0, endAngle=360, color=colors["light_blue"], thickness=1)
-
-        ConvertToQtFormat = QImage(imageToShow.data, imageToShow.shape[1], imageToShow.shape[0], QImage.Format_RGB888)
-        pic = ConvertToQtFormat.scaled(640, 480, Qt.KeepAspectRatio)
-
-        self.screenLabel.setPixmap(QPixmap.fromImage(pic).scaledToWidth(400).scaledToHeight(400))
+    def updateVideo(self, pic, confidence_levels):
+        self.setEmotionLabels(confidence_levels)
+        self.screenLabel.setPixmap(QPixmap.fromImage(pic))
     
     def toggleMaskMode(self):
         if self.maskMode == MASK_MODE_FULL:
             self.maskMode = MASK_MODE_LEFT
+            self.webcamWorker.changeMaskMode(MASK_MODE_LEFT)
             self.changeMaskModeButton.setText("Mask Mode: Left")
         elif self.maskMode == MASK_MODE_LEFT:
             self.maskMode = MASK_MODE_SIMPLIFIED
+            self.webcamWorker.changeMaskMode(MASK_MODE_SIMPLIFIED)
             self.changeMaskModeButton.setText("Mask Mode: Lite")
         elif self.maskMode == MASK_MODE_SIMPLIFIED:
             self.maskMode = MASK_MODE_FULL
+            self.webcamWorker.changeMaskMode(MASK_MODE_FULL)
             self.changeMaskModeButton.setText("Mask Mode: Full")
 
     def toggleMask(self):
         if self.useMask:
             self.useMask = False
+            self.webcamWorker.changeShowMask(False)
             self.toggleMaskButton.setText("Show Mask: Off")
         else:
             self.useMask = True
+            self.webcamWorker.changeShowMask(True)
             self.toggleMaskButton.setText("Show Mask: On")
 
     def imgMode(self):
@@ -285,15 +266,13 @@ class StartMenu(QWidget):
         if self.useMask:
             image = annotated_image
 
-        if len(DetectionResult.face_landmarks) > 0:
-            model_to_use = self.emotionDetectionModelSimplified
-
+        if DetectionResult != None and len(DetectionResult.face_landmarks) > 0:
             if self.maskMode == MASK_MODE_FULL:
-                model_to_use = self.emotionDetectionModel
+                confidence_levels = emotion_detection.detect_emotions(self.emotionDetectionModel, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_left=stat_df_left, stat_simp=stat_df_simplified, maskMode=self.maskMode)
             elif self.maskMode == MASK_MODE_LEFT:
-                model_to_use = self.emotionDetectionModelLeft
-
-            confidence_levels = emotion_detection.detect_emotions(model_to_use, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_left=stat_df_left, stat_simp=stat_df_simplified, maskMode=self.maskMode)
+                confidence_levels = emotion_detection.detect_emotions(self.emotionDetectionModelLeft, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_left=stat_df_left, stat_simp=stat_df_simplified, maskMode=self.maskMode)
+            elif self.maskMode == MASK_MODE_SIMPLIFIED:
+                confidence_levels = emotion_detection.detect_emotions(self.emotionDetectionModelSimplified, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_left=stat_df_left, stat_simp=stat_df_simplified, maskMode=self.maskMode)
         else:
             confidence_levels = {
                 "Angry" : 00.00,
@@ -344,11 +323,23 @@ class StartMenu(QWidget):
 
 
 class Webcam(QThread):
-    ImageUpdate = Signal(ndarray, float, tuple, tuple, tuple)
+    ImageUpdate = Signal(QImage, dict)
     DetectionResult = None
-
+    maskMode = MASK_MODE_FULL
+    showMask = True
+    def changeMaskMode(self, newMode):
+        self.maskMode = newMode
+    
+    def changeShowMask(self, newMode):
+        self.showMask = newMode
+    
     def run(self):
         self.ThreadActive = True
+
+        faceDetectionModel = face_detection.init_model(face_detection_wd)
+        emotionDetectionModel = emotion_detection.init_model(emotion_detection_wd)
+        emotionDetectionModelSimplified = emotion_detection.init_model(emotion_detection_wd_simplified)
+        emotionDetectionModelLeft = emotion_detection.init_model(emotion_detection_wd_left)
         Capture = cv2.VideoCapture(0)
 
 
@@ -360,9 +351,16 @@ class Webcam(QThread):
         ellipse_coord = (int(height // 2), int(height * 0.45))
         axes_length = (int(height * 0.35), int(height * 0.42))
 
-
+        delta = 0
         print(center_coord)
 
+        confidence_levels = {
+            "Angry" : 00.00,
+            "Happy" : 00.00,
+            "Neutral" : 00.00,
+            "Sad" : 00.00
+        }
+        
         previous = time()
         while self.ThreadActive:
             ret, frame = Capture.read()
@@ -374,19 +372,34 @@ class Webcam(QThread):
                 Image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
                 Image = Image[0:height, int(offset // 2):int(offset // 2)+height]
-
-                '''
-                Uncomment This if you want to resize the image to what it used in the dataset (about 96x96)
-                
-                height, width = Image.shape[:2]
-                scaling_factor = 96 / float(height)
-                new_height = 96
-                new_width = width * scaling_factor
-                Image = cv2.resize(Image, (round(new_width), round(new_height)))
-                '''
-
                 FlippedImage = cv2.flip(Image, 1)
-                self.ImageUpdate.emit(FlippedImage, timeElapsed, center_coord, ellipse_coord, axes_length)
+                
+                delta += timeElapsed
+                DetectionResult, FlippedAnnotatedImage = face_detection.detect_faces(faceDetectionModel, FlippedImage, self.maskMode)
+
+                if delta > 0.5 and DetectionResult != None and len(DetectionResult.face_landmarks) > 0:
+                    if self.maskMode == MASK_MODE_FULL:
+                        confidence_levels = emotion_detection.detect_emotions(emotionDetectionModel, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_left=stat_df_left, stat_simp=stat_df_simplified, maskMode=self.maskMode)
+                    elif self.maskMode == MASK_MODE_LEFT:
+                        confidence_levels = emotion_detection.detect_emotions(emotionDetectionModelLeft, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_left=stat_df_left, stat_simp=stat_df_simplified, maskMode=self.maskMode)
+                    elif self.maskMode == MASK_MODE_SIMPLIFIED:
+                        confidence_levels = emotion_detection.detect_emotions(emotionDetectionModelSimplified, DetectionResult.face_landmarks[0], stat_full=stat_df, stat_left=stat_df_left, stat_simp=stat_df_simplified, maskMode=self.maskMode)
+                    delta = 0
+                
+                if self.showMask:
+                    imageToShow = FlippedAnnotatedImage
+                else:
+                    imageToShow = FlippedImage
+
+
+                imageToShow = cv2.circle(imageToShow, center=center_coord, radius=2, color=colors["light_blue"], thickness=1)
+                imageToShow = cv2.ellipse(imageToShow, center=ellipse_coord, axes=axes_length, angle=0, startAngle=0, endAngle=360, color=colors["light_blue"], thickness=1)
+                
+                ConvertToQtFormat = QImage(imageToShow.data, imageToShow.shape[1], imageToShow.shape[0], QImage.Format_RGB888)
+                pic = ConvertToQtFormat.scaled(800, 400, Qt.KeepAspectRatio)
+
+
+                self.ImageUpdate.emit(pic, confidence_levels)
     def stop(self):
         self.ThreadActive = False
         self.quit()

@@ -12,140 +12,133 @@ FACEMESH_LEFTSIDE = frozenset([(127, 34), (34, 139), (139, 127), (11, 0), (0, 37
 
 
 def draw_landmarks_on_image_left(rgb_image, detection_result):
-  face_landmarks_list = detection_result.face_landmarks
-  annotated_image = np.copy(rgb_image)
+    annotated_image = np.copy(rgb_image)
 
-  # Loop through the detected faces to visualize.
-  for idx in range(len(face_landmarks_list)):
-    face_landmarks = face_landmarks_list[idx]
+    if len(detection_result.face_landmarks) > 0:
+        face_landmarks_list = detection_result.face_landmarks[0]
 
-    # Draw the face landmarks.
-    face_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-    face_landmarks_proto.landmark.extend([
-      landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in face_landmarks
-    ])
+        # Draw the face landmarks.
+        face_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+        face_landmarks_proto.landmark.extend([
+        landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in face_landmarks_list
+        ])
 
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=FACEMESH_LEFTSIDE,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=solutions.drawing_styles
-        .get_default_face_mesh_tesselation_style())
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=solutions.face_mesh.FACEMESH_CONTOURS,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=solutions.drawing_styles
-        .get_default_face_mesh_contours_style())
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=solutions.face_mesh.FACEMESH_LIPS,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=solutions.drawing_styles
-        .get_default_face_mesh_tesselation_style())
-  return annotated_image
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=FACEMESH_LEFTSIDE,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=solutions.drawing_styles
+            .get_default_face_mesh_tesselation_style())
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=solutions.face_mesh.FACEMESH_CONTOURS,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=solutions.drawing_styles
+            .get_default_face_mesh_contours_style())
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=solutions.face_mesh.FACEMESH_LIPS,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=solutions.drawing_styles
+            .get_default_face_mesh_tesselation_style())
+    return annotated_image
 
 
 
 def draw_landmarks_on_image_simplified(rgb_image, detection_result):
-  face_landmarks_list = detection_result.face_landmarks
-  annotated_image = np.copy(rgb_image)
+    annotated_image = np.copy(rgb_image)
 
-  # Loop through the detected faces to visualize.
-  for idx in range(len(face_landmarks_list)):
-    face_landmarks = face_landmarks_list[idx]
+    if len(detection_result.face_landmarks) > 0:
+        face_landmarks_list = detection_result.face_landmarks[0]
 
-    # Draw the face landmarks.
-    face_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-    face_landmarks_proto.landmark.extend([
-      landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in face_landmarks
-    ])
+        # Draw the face landmarks.
+        face_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+        face_landmarks_proto.landmark.extend([
+        landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in face_landmarks_list
+        ])
 
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=solutions.face_mesh.FACEMESH_LIPS,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=solutions.drawing_styles
-        .get_default_face_mesh_tesselation_style())
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=solutions.face_mesh.FACEMESH_LEFT_EYEBROW,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=solutions.drawing_styles
-        .get_default_face_mesh_tesselation_style())
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=solutions.face_mesh.FACEMESH_RIGHT_EYEBROW,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=solutions.drawing_styles
-        .get_default_face_mesh_tesselation_style())
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=solutions.face_mesh.FACEMESH_NOSE,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=solutions.drawing_styles
-        .get_default_face_mesh_tesselation_style())
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=solutions.face_mesh.FACEMESH_CONTOURS,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=solutions.drawing_styles
-        .get_default_face_mesh_contours_style())
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=solutions.face_mesh.FACEMESH_IRISES,
-          landmark_drawing_spec=None,
-          connection_drawing_spec=solutions.drawing_styles
-          .get_default_face_mesh_iris_connections_style())
-
-  return annotated_image
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=solutions.face_mesh.FACEMESH_LIPS,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=solutions.drawing_styles
+            .get_default_face_mesh_tesselation_style())
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=solutions.face_mesh.FACEMESH_LEFT_EYEBROW,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=solutions.drawing_styles
+            .get_default_face_mesh_tesselation_style())
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=solutions.face_mesh.FACEMESH_RIGHT_EYEBROW,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=solutions.drawing_styles
+            .get_default_face_mesh_tesselation_style())
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=solutions.face_mesh.FACEMESH_NOSE,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=solutions.drawing_styles
+            .get_default_face_mesh_tesselation_style())
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=solutions.face_mesh.FACEMESH_CONTOURS,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=solutions.drawing_styles
+            .get_default_face_mesh_contours_style())
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=solutions.face_mesh.FACEMESH_IRISES,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=solutions.drawing_styles
+            .get_default_face_mesh_iris_connections_style())
+    return annotated_image
 
 def draw_landmarks_on_image(rgb_image, detection_result):
-  face_landmarks_list = detection_result.face_landmarks
-  annotated_image = np.copy(rgb_image)
+    
+    annotated_image = np.copy(rgb_image)
 
-  # Loop through the detected faces to visualize.
-  for idx in range(len(face_landmarks_list)):
-    face_landmarks = face_landmarks_list[idx]
+    if len(detection_result.face_landmarks) > 0:
+        face_landmarks_list = detection_result.face_landmarks[0]
 
-    # Draw the face landmarks.
-    face_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-    face_landmarks_proto.landmark.extend([
-      landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in face_landmarks
-    ])
+        # Draw the face landmarks.
+        face_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+        face_landmarks_proto.landmark.extend([
+        landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in face_landmarks_list
+        ])
 
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=solutions.face_mesh.FACEMESH_TESSELATION,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=solutions.drawing_styles
-        .get_default_face_mesh_tesselation_style())
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=solutions.face_mesh.FACEMESH_CONTOURS,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=solutions.drawing_styles
-        .get_default_face_mesh_contours_style())
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=solutions.face_mesh.FACEMESH_IRISES,
-          landmark_drawing_spec=None,
-          connection_drawing_spec=solutions.drawing_styles
-          .get_default_face_mesh_iris_connections_style())
-
-  return annotated_image
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=solutions.face_mesh.FACEMESH_TESSELATION,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=solutions.drawing_styles
+            .get_default_face_mesh_tesselation_style())
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=solutions.face_mesh.FACEMESH_CONTOURS,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=solutions.drawing_styles
+            .get_default_face_mesh_contours_style())
+        solutions.drawing_utils.draw_landmarks(
+            image=annotated_image,
+            landmark_list=face_landmarks_proto,
+            connections=solutions.face_mesh.FACEMESH_IRISES,
+            landmark_drawing_spec=None,
+            connection_drawing_spec=solutions.drawing_styles
+            .get_default_face_mesh_iris_connections_style())
+    return annotated_image
 
 def init_model(filepath):
     BaseOptions = tasks.BaseOptions
@@ -162,11 +155,89 @@ def init_model(filepath):
 
 def detect_faces(detector, cv2_image_data, maskMode):
     image = Image(image_format=ImageFormat.SRGB, data=cv2_image_data)
-    detection_result = detector.detect(image) #this is the line
+
+    annotated_image = np.copy(image)
     
-    if maskMode == MASK_MODE_FULL:
-       return detection_result, draw_landmarks_on_image(image.numpy_view(), detection_result)
-    elif maskMode == MASK_MODE_LEFT:
-        return detection_result, draw_landmarks_on_image_left(image.numpy_view(), detection_result)
-    elif maskMode == MASK_MODE_SIMPLIFIED:
-        return detection_result, draw_landmarks_on_image_simplified(image.numpy_view(), detection_result)
+    detection_result_draw = detector.detect(image) #this is the line
+    detection_result = None
+
+    if len(detection_result_draw.face_landmarks) > 0:
+        annotated_image = draw_bounding_box(cv2_image_data, detection_result_draw.face_landmarks[0])
+        annotated_image = Image(image_format=ImageFormat.SRGB, data=annotated_image)
+        detection_result = detector.detect(annotated_image)
+
+        if maskMode == MASK_MODE_FULL:
+            image = draw_landmarks_on_image(image.numpy_view(), detection_result_draw)
+            annotated_image = draw_landmarks_on_image(annotated_image.numpy_view(), detection_result)
+        elif maskMode == MASK_MODE_LEFT:
+            image = draw_landmarks_on_image_left(image.numpy_view(), detection_result_draw)
+            annotated_image = draw_landmarks_on_image_left(annotated_image.numpy_view(), detection_result)
+        elif maskMode == MASK_MODE_SIMPLIFIED:
+            image = draw_landmarks_on_image_simplified(image.numpy_view(), detection_result_draw)
+            annotated_image = draw_landmarks_on_image_simplified(annotated_image.numpy_view(), detection_result)
+        
+        h, w, c = cv2_image_data.shape
+        annotated_image = cv2.resize(annotated_image, (w, h))
+    
+        return detection_result, np.concatenate([image, annotated_image], axis=1)
+    else:
+        return detection_result, np.concatenate([cv2_image_data, cv2_image_data], axis=1)
+
+import cv2
+import math
+def draw_bounding_box(annotated_image, face_landmarks, padding=50):
+    h, w, c = annotated_image.shape
+
+    #Get points corresponding to top, bottom, and sides of a face a draw it first
+    left = face_landmarks[137]
+    right = face_landmarks[323]
+    left_point = (int(left.x * w), int(left.y * h)) 
+    right_point = (int(right.x * w), int(right.y * h)) 
+
+    cx_min = w
+    cy_min = h
+    cx_max= cy_max= 0
+    for id, lm in enumerate(face_landmarks):
+        cx, cy = int(lm.x * w), int(lm.y * h)
+        if cx<cx_min:
+            cx_min=cx
+        if cy<cy_min:
+            cy_min=cy
+        if cx>cx_max:
+            cx_max=cx
+        if cy>cy_max:
+            cy_max=cy
+    
+    cx_min -= padding
+    cy_min -= padding
+    cx_max += padding
+    cy_max += padding
+
+    cx_min = max(0, cx_min)
+    cy_min = max(0, cy_min)
+    cx_max = min(w, cx_max)
+    cy_max = min(h, cy_max)
+
+    transformed_image = np.copy(annotated_image)
+
+    base_start = (cx_min, int((cy_min + cy_max) / 2))
+
+    hp = math.dist(left_point, right_point) / 2
+    y = left_point[1] - base_start[1]
+
+    if y < 0:
+        theta = np.arcsin(y/hp) * -100
+    else:
+        theta = np.arcsin(y/hp) * -50
+    transformed_image = transformed_image[cy_min:cy_max, cx_min:cx_max]
+    center = tuple(np.array(transformed_image.shape[1::-1]) / 2)
+    rot_mat = cv2.getRotationMatrix2D(center, theta, 1.0)
+    transformed_image = cv2.warpAffine(transformed_image, rot_mat, transformed_image.shape[1::-1], flags=cv2.INTER_LINEAR)
+    
+
+    return transformed_image
+
+#Top = 10
+#Bot = 152
+#Left = 137
+#Right = 323
